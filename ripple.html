@@ -1,0 +1,80 @@
+<style>
+
+  .btns a{
+    position: relative;
+    display: block;
+    text-decoration: none;
+    font-size: 18px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    overflow: hidden;
+  }
+  .btns a > .ripple{
+    position: absolute;
+    background: #bbb;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    pointer-events: none;
+    animation: ripples .6s linear;
+    z-index: 1;
+    transition: .5s opacity ease;
+  }
+  @keyframes ripples {
+    0% {
+      width: 50px;
+      height: 100px;
+      opacity: .5;
+    }
+    100% {
+      width: 1000px;
+      height: 1000px;
+    }
+  }
+
+</style>
+
+<div class="btns">
+    <a href="#" ondragstart="return false;" ondrop="return false;"><span class="nav-title">title</span></a>      
+</div>
+
+<script>
+  const buttons = document.querySelectorAll("a");
+  var isripple = false;
+  buttons.forEach((button) => {
+    button.onmousedown = function(e){
+      if (!isripple) {
+          isripple = true;
+          let x = e.clientX - e.target.offsetLeft;
+          let y = e.clientY - e.target.offsetTop;
+          let ripple = document.createElement("span");
+          ripple.setAttribute('class', 'ripple');
+          ripple.style.left = `${x}px`;
+          ripple.style.top = `${y}px`;
+          this.appendChild(ripple);
+          ripple.style.opacity = ".5";
+          setTimeout(function(){
+              ripple.style.width = "1000px";
+              ripple.style.height = "1000px";
+          }, 550);
+      }
+    }
+    button.onmouseup = function(e){
+      if (isripple) {
+          document.querySelector(".ripple").style.opacity = "0";
+          setTimeout(function(){
+          document.querySelector(".ripple").remove();
+          isripple = false;
+          }, 500);
+      }
+    }
+    button.onmouseout = function(e){
+      if (isripple) {
+          document.querySelector(".ripple").style.opacity = "0";
+          setTimeout(function(){
+          document.querySelector(".ripple").remove();
+          isripple = false;
+          }, 500);
+      }
+    }
+  });
+  </script>
