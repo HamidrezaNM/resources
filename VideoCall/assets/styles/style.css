@@ -1,0 +1,146 @@
+body {
+    margin: 0;
+    font-family: sans-serif;
+}
+
+#show-peer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    padding: 0 20px;
+    font-family: sans-serif;
+    z-index: 999;
+    opacity: 1;
+    transition: all .5s ease;
+}
+
+.call-output {
+    display: none;
+    justify-content: space-around;
+    margin: 0;
+    height: 100vh;
+    position: relative;
+}
+
+.video {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+#ourVideo {
+    width: 32vw;
+    min-height: 10vh;
+    max-width: 180px;
+    max-height: 20vh;
+    position: absolute;
+    right: 7px;
+    bottom: 125px;
+    background-color: #00000075;
+    display: table;
+    transition: all .5s ease;
+}
+
+#remoteVideo {
+    width: 100%;
+    height: 100%;
+    margin: auto;
+}
+
+.bottom {
+    position: fixed;
+    bottom: 0px;
+    width: 100%;
+    left: 0;
+    padding: 24px 0;
+    text-align: center;
+    background: linear-gradient(0deg, #00000040, transparent);
+    transition: all .5s ease;
+}
+
+.call {
+    display: flex;
+    justify-content: center;
+}
+
+#alert {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    opacity: 1;
+    transform: translate(-50%, -50%);
+    text-transform: capitalize;
+    font-size: 28px;
+    transition: all .5s ease;
+}
+#alert span {
+    color: #00000075;
+    text-shadow: 0 0 60px black;
+    font-size: 28px;
+}
+
+#peerID {
+    height: 50px;
+    width: 200px;
+    border-radius: 7px;
+    border: 1px solid #00000070;
+    color: #888;
+    padding: 0 10px;
+    outline: none;
+    background-color: #363640;
+}
+
+#call-peer {
+    background-color: #3C3C46;
+    color: #fff;
+    font-size: 18px;
+    border-radius: 7px;
+    border: none;
+    margin-left: -16px;
+    height: 52px;
+    padding: 0 10px;
+    cursor: pointer;
+}
+
+.call-buttons {
+    display: none;
+    justify-content: space-evenly;
+    transition: all .5s ease;
+}
+
+.call-buttons button {
+    border-radius: 50px;
+    outline: none;
+    border: none;
+    width: 60px;
+    height: 60px;
+    margin: 0 4px;
+    background-color: #00000075;
+    cursor: pointer;
+    transition: all .3s ease;
+}
+.call-buttons button:hover {
+    background-color: #00000090;
+    transition: all .3s ease;
+}
+.call-buttons span {
+    color: #fff;
+    display: block;
+    font-size: 14px;
+    padding-top: 7px;
+}
+
+.call-buttons img {
+    width: 34px;
+}
+
+.call-buttons .alt button {
+    background-color: #fff;
+}
+.call-buttons .alt img {
+    filter: invert(1);
+}
+
+#call-disconnect {
+    background-color: #F01D2C;
+}
