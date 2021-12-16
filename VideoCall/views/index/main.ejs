@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://kit.fontawesome.com/75208685eb.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="/assets/styles/style.css">
+    <title>Video Call</title>
+</head>
+
+<style>
+
+</style>
+<script>
+    window.onerror = function (msg, url, linenumber) {
+        alert('Error message: ' + msg + '\nURL: ' + url + '\nLine Number: ' + linenumber);
+        return true;
+    }</script>
+
+<body>
+    <h3 id="show-peer"></h3>
+    <div class="call-output">
+        <div id="ourVideo"></div>
+        <div id="remoteVideo"></div>
+    </div>
+    <div id="alert"><span></span></div>
+    <div class="bottom">
+        <div class="call">
+            <input type="text" id="peerID" placeholder="Peer ID">
+            <button id="call-peer">Connect</button>
+        </div>
+        <div class="call-buttons">
+            <div><button id="shareScreen"><img src="/assets/icons/calls_sharescreen.png" alt=""></button><span>Share
+                    Screen</span></div>
+            <div><button id="disableVideo"><img src="/assets/icons/calls_camera_mini.png" alt=""
+                        style="transform: scale(1.2);"></button><span>Start Video</span></div>
+            <div><button id="mute"><img src="/assets/icons/calls_unmute.png" alt=""
+                        style="transform: scale(1.2);"></button><span>Unmute</span></div>
+            <div><button id="call-disconnect"><img src="/assets/icons/calls_decline.png" alt=""></button><span>End
+                    call</span></div>
+        </div>
+
+    </div>
+</body>
+
+<script src="/assets/scripts/peerjs.min.js"></script>
+
+<script>
+    window.addEventListener('load', (event) => {
+        var peer = new Peer();
+        var connected = false;
+        var myStream;
+        var currentPeer;
+        var hostConn;
+        var peerID;
+        var peerList = [];
+        var status = "peer";
+        peer.on('open', function (id) {
+            peerID = id;
+            document.getElementById("show-peer").innerHTML = id;
+        })
+        peer.on('connection', function (conn) {
+            // peer.connect(id)
+            document.getElementById("alert").children[0].innerHTML = "Connected";
+            setTimeout(() => {
+                document.getElementById("alert").style.opacity = 0;
+                setTimeout(() => {
+                    document.getElementById("alert").children[0].innerHTML = "";
+                    document.getElementById("alert").style.opacity = 1;
+                }, 500);
+            }, 2000);
+            conn.on('open', function () {
+                conn.on('data', function (data) {
+                    document.getElementById("alert").children[0].innerHTML = data;
+                    if (data == "video disabled") {
+                        document.getElementById("remoteVideo").style.opacity = "0";
+                    } else if (data == "video enabled") {
+                        document.getElementById("alert").children[0].innerHTML = '';
+                        document.getElementById("remoteVideo").style.opacity = "1";
+                    }
+                    console.log('Received', data);
+                });
+                hostConn = conn;
+                status = "host"
+                conn.send("connected")
+            })
+            conn.on('close', function () {
+                console.log("connection closed")
+                document.querySelector(".call-output").style.display = "none"
+                location.reload()
+            })
+        })
+        document.getElementById("call-disconnect").addEventListener("click", (e) => {
+            handlePeerDisconnect();
+        })
+
+
+        // peer.on('call', function (call) {
+        //     call.on('stream', function (remoteStream) {
+        //         if (!peerList.includes(call.peer)) {
+        //             addRemoteVideo(remoteStream)
+        //             currentPeer = call.peerConnection
+        //             peerList.push(call.peer)
+        //         }
+        //     })
+        // })
+
+        peer.on('call', function (call) {
+            navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+                .then((stream) => {
+                    myStream = stream
+                    addOurVideo(stream);
+                    call.answer(stream)
+                    call.on('stream', function (remoteStream) {
+                        if (!peerList.includes(call.peer)) {
+                            addRemoteVideo(remoteStream)
+                            currentPeer = call.peerConnection
+                            peerList.push(call.peer)
+                        }
+                    })
+                    // conn = peer.connect(currentPeer.peerIdentity)
+                    connected = true
+                    document.querySelector(".call-output").style.display = "flex"
+                    document.querySelector(".call").style.display = "none"
+                    document.querySelector(".call-buttons").style.display = "flex"
+                }).catch((err) => {
+                    alert(err + "unable to get media")
+                })
+        })
+
+        document.getElementById("call-peer").addEventListener('click', (e) => {
+            let remotePeerId = document.getElementById("peerID").value;
+            connected = true;
+            document.getElementById("show-peer").innerHTML = "Connecting to " + remotePeerId;
+            document.getElementById("alert").children[0].innerHTML = "Connecting...";
+            callPeer(remotePeerId);
+            document.querySelector(".call-output").style.display = "flex"
+            document.querySelector(".call").style.display = "none"
+            document.querySelector(".call-buttons").style.display = "flex"
+        })
+        document.getElementById("mute").addEventListener("click", (e) => {
+            if (myStream.getAudioTracks()[0].enabled) {
+                muteMic();
+            } else {
+                unmuteMic()
+            }
+        })
+        document.getElementById("disableVideo").addEventListener("click", (e) => {
+            if (myStream.getVideoTracks()[0].enabled) {
+                disableVideo();
+            } else {
+                enableVideo();
+            }
+        })
+        document.getElementById("shareScreen").addEventListener('click', (e) => {
+            navigator.mediaDevices.getDisplayMedia({
+                video: {
+                    cursor: "always"
+                },
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true
+                }
+            }).then((stream) => {
+                let videoTrack = stream.getVideoTracks()[0];
+                videoTrack.onended = function () {
+                    stopScreenShare();
+                }
+                let sender = currentPeer.getSenders().find(function (s) {
+                    return s.track.kind == videoTrack.kind
+                })
+                sender.replaceTrack(videoTrack)
+                document.getElementById("shareScreen").parentElement.classList.add("alt")
+            }).catch((err) => {
+                console.log("unable to get display media. " + err)
+            })
+        })
+
+        var tOut;
+        var callButtons = document.querySelector(".call-buttons");
+        document.body.addEventListener("mousemove",
+            function () {
+                if (connected) {
+                    // console.log("hovered")
+                    // callButtons.style.opacity = "1"
+                    clearTimeout(tOut);
+                    document.querySelector(".bottom").style.opacity = 1;
+                    document.getElementById("show-peer").style.opacity = 1;
+                    document.querySelector("#ourVideo").style.bottom = "125px";
+                    tOut = setTimeout(function () {
+                        document.getElementById("show-peer").style.opacity = 0;
+                        document.querySelector(".bottom").style.opacity = 0;
+                        document.querySelector("#ourVideo").style.bottom = "7px";
+                    }, 3000);
+                }
+            }, function () {
+            })
+
+        var peerConn = null;
+        var peerConnected = false;
+        function connect(peerID) {
+            peerConn = peer.connect(peerID)
+            peerConn.on('open', function () {
+                // Receive messages
+                peerConn.on('data', function (data) {
+                    document.getElementById("alert").children[0].innerHTML = data;
+                    switch (data) {
+                        case "connected":
+                            setTimeout(() => {
+                                document.getElementById("alert").style.opacity = 0;
+                                setTimeout(() => {
+                                    document.getElementById("alert").children[0].innerHTML = "";
+                                    document.getElementById("alert").style.opacity = 1;
+                                }, 500);
+                            }, 2000);
+                            break;
+                        case "video disabled":
+                            document.getElementById("remoteVideo").style.opacity = 0;
+                            break;
+                        case "video enabled":
+                            document.getElementById("alert").children[0].innerHTML = '';
+                            document.getElementById("remoteVideo").style.opacity = "1";
+                            break;
+                        default:
+                            break;
+                    }
+                });
+                peerConnected = true
+
+                // Send messages
+                // conn.send('Hello from phone!');
+            });
+            peerConn.on('close', function () {
+                console.log("connection closed")
+                document.querySelector(".call-output").style.display = "none"
+                location.reload()
+            })
+        }
+
+        function handlePeerDisconnect() {
+            // manually close the peer connections
+            for (let conns in peer.connections) {
+                peer.connections[conns].forEach((conn, index, array) => {
+                    conn.peerConnection.close();
+
+                    // close it using peerjs methods
+                    if (conn.close)
+                        conn.close();
+                });
+            }
+        }
+
+        function callPeer(id) {
+            navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((stream) => {
+                myStream = stream
+                addOurVideo(stream);
+                document.getElementById("show-peer").innerHTML = "Connected to " + id;
+                connected = true;
+                connect(id)
+                document.querySelector(".call-output").style.display = "flex"
+                document.querySelector(".call").style.display = "none"
+                document.querySelector(".call-buttons").style.display = "flex"
+                let call = peer.call(id, stream)
+                call.on('stream', function (remoteStream) {
+                    if (!peerList.includes(call.peer)) {
+                        addRemoteVideo(remoteStream)
+                        currentPeer = call.peerConnection
+                        peerList.push(call.peer)
+                    }
+                })
+            }).catch((err) => {
+                alert(err + " unable to get media")
+            })
+        }
+
+        function stopScreenShare() {
+            let videoTrack = myStream.getVideoTracks()[0]
+            var sender = currentPeer.getSenders().find(function (s) {
+                return s.track.kind == videoTrack.kind;
+            })
+            sender.replaceTrack(videoTrack)
+            document.getElementById("shareScreen").parentElement.classList.remove("alt")
+        }
+
+        function disableVideo() {
+            console.log("disabled")
+            let videoTrack = myStream.getVideoTracks()[0]
+            videoTrack.enabled = false;
+            document.getElementById("disableVideo").children[0].src = "/assets/icons/chat_calls_video.png";
+            document.getElementById("disableVideo").parentElement.classList.add("alt")
+            if (status == "host") {
+                hostConn.send('video disabled')
+            } else {
+                peerConn.send('video disabled')
+            }
+        }
+        function enableVideo() {
+            console.log("enabled")
+            let videoTrack = myStream.getVideoTracks()[0]
+            videoTrack.enabled = true;
+            document.getElementById("disableVideo").children[0].src = "/assets/icons/calls_camera_mini.png";
+            document.getElementById("disableVideo").parentElement.classList.remove("alt")
+            document.getElementById("alert").children[0].innerHTML = ''
+            if (status == "host") {
+                hostConn.send('video enabled')
+            } else {
+                peerConn.send('video enabled')
+            }
+        }
+
+        function muteMic() {
+            myStream.getAudioTracks()[0].enabled = false;
+            document.getElementById("mute").children[0].src = "/assets/icons/calls_mute.png";
+            document.getElementById("mute").parentElement.classList.add("alt")
+            document.getElementById("mute").parentElement.children[1].innerHTML = "Mute"
+        }
+        function unmuteMic() {
+            myStream.getAudioTracks()[0].enabled = true;
+            document.getElementById("mute").children[0].src = "/assets/icons/calls_unmute.png";
+            document.getElementById("mute").parentElement.classList.remove("alt")
+            document.getElementById("mute").parentElement.children[1].innerHTML = "Unmute"
+        }
+
+        function addRemoteVideo(stream) {
+            let video = document.createElement("video");
+            video.srcObject = stream;
+            video.classList.add("video")
+            video.play()
+            document.getElementById("remoteVideo").append(video)
+        }
+        function addOurVideo(stream) {
+            let video = document.createElement("video");
+            video.srcObject = stream;
+            video.classList.add("video")
+            video.play()
+            video.muted = true;
+            document.getElementById("ourVideo").append(video)
+        }
+    })
+
+</script>
+
+</html>
